@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
+	<classpathentry kind="lib" path="/home/ivo/lib/java/weka/weka.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/Kettle"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/linux/x86/libjaybird21.so"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/linux/x86/swt.jar"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/win32/infobright_jni_64bit.dll"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/win32/infobright_jni.dll"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/win32/jaybird21.dll"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/win32/JtdsXA.dll"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/win32/ntlmauth.dll"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/win32/swt.jar"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/commands.jar"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/common.jar"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/jface.jar"/>
+	<classpathentry kind="lib" path="/Kettle/libswt/runtime.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/game-core"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/configurations"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
