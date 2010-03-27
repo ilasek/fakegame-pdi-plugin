@@ -5,78 +5,92 @@
 
 package cz.ilasek.kettle.fakegame;
 
-import game.classifiers.Classifiers;
-import game.configuration.ClassWithConfigBean;
-
-import java.util.List;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.ShellAdapter;
 import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
-import org.pentaho.di.core.row.ValueMetaAndData;
+import org.pentaho.di.core.Props;
+import org.pentaho.di.core.exception.KettleStepException;
+import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStepMeta;
 import org.pentaho.di.trans.step.StepDialogInterface;
-import org.pentaho.di.trans.step.errorhandling.StreamInterface;
-import org.pentaho.di.ui.core.dialog.EnterValueDialog;
+import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
-
-import configuration.MainConfigurationTree;
-import configuration.MainConfigurationTreeDialog;
 
 public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogInterface
 {
-	private FakeGamePluginMeta input;
-	private ValueMetaAndData value;
+	private FakeGamePluginMeta currentMeta;
+	private FakeGamePluginMeta originalMeta;
 
-	private Label        wlValName;
-	private Text         wValName;
-	private FormData     fdlValName, fdValName;
-
-	private Label        wlValue;
-	private Button       wbValue;
-	private Text         wValue;
-	private FormData     fdlValue, fdbValue, fdValue;
+	private CTabFolder wTabFolder;
+	private FormData fdTabFolder;
 	
-	private Button       wShowDialog;
-	private Listener     lsShowDialog;
+	private CTabItem wFileTab;
+	private CTabItem wModelTab;
+	private CTabItem wMappingsTab;
+	
+	private Label wlFilename;
+	private FormData fdlFilename;
+	private Button wbFilename;
+	private FormData fdbFilename;
+	private TextVar wFilename;
+	private FormData fdFilename;
+	private FormData fdFileComp;
+	
+	private Text wModelText;
+	private FormData fdModelText;
+	private FormData fdModelComp;
+	
+    private Text wMappingsText;
+    private FormData fdMappingsText;
+    private FormData fdMappingsComp;	
 	
 	public FakeGamePluginDialog(Shell parent, Object in, TransMeta transMeta, String sname)
 	{
-		super(parent, (BaseStepMeta)in, transMeta, sname);
-		input=(FakeGamePluginMeta)in;
-//		value = input.getValue();
+		super(parent, (BaseStepMeta) in, transMeta, sname);
+		currentMeta = (FakeGamePluginMeta) in;
+		originalMeta = (FakeGamePluginMeta) currentMeta.clone();
 	}
 
 	public String open()
 	{
-	    Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-	    
-		// Dialog box pro zobrazeni input fieldu
+		// Dialog box pro zobrazeni currentMeta fieldu
 		Shell parent = getParent();
 		Display display = parent.getDisplay();
 		
 		// Nastavime zobrazeni dialogu
 		shell = new Shell(parent, SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX);
 		props.setLook( shell );
-        // input je DummyPluginMeta, na jeho zaklade se zjistit id pluginu 
+        // currentMeta je DummyPluginMeta, na jeho zaklade se zjistit id pluginu 
 		// a nahraje se prislusny obrazek v levem hornim rohu
-		setShellImage(shell, input);
+		setShellImage(shell, currentMeta);
 	
 
 		// listener poslouchajici nad vsemi tremi policky formulare
@@ -84,10 +98,10 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 		{
 			public void modifyText(ModifyEvent e) 
 			{
-				input.setChanged();
+				currentMeta.setChanged();
 			}
 		};
-		changed = input.hasChanged();
+		changed = currentMeta.hasChanged();
 
 		// Nastaveni zobrazeni fomrulare
 		FormLayout formLayout = new FormLayout ();
@@ -97,7 +111,7 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 		// predame nastaveni formulare do dialogu
 		shell.setLayout(formLayout);
 		// nastavime titulek
-		shell.setText(Messages.getString("DummyPluginDialog.Shell.Title")); //$NON-NLS-1$
+		shell.setText(Messages.getString("FakeGamePluginDialog.Shell.Title"));
 		
 		int middle = props.getMiddlePct();
 		int margin = Const.MARGIN;
@@ -105,7 +119,7 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 		// Stepname line
 		// vytvorime popisek k step name policku
 		wlStepname=new Label(shell, SWT.RIGHT);
-		wlStepname.setText(Messages.getString("DummyPluginDialog.StepName.Label")); //$NON-NLS-1$
+		wlStepname.setText(Messages.getString("FakeGamePluginDialog.StepName.Label"));
         props.setLook( wlStepname );
 		
         // samotne policko
@@ -130,161 +144,341 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 		fdStepname.right= new FormAttachment(100, 0);
 		wStepname.setLayoutData(fdStepname);
 		
-		// ValName line
-//		wlValName=new Label(shell, SWT.RIGHT);
-//		wlValName.setText(Messages.getString("DummyPluginDialog.ValueName.Label")); //$NON-NLS-1$
-//        props.setLook( wlValName );
-//		fdlValName=new FormData();
-//		fdlValName.left = new FormAttachment(0, 0);
-//		fdlValName.right= new FormAttachment(middle, -margin);
-//		fdlValName.top  = new FormAttachment(wStepname, margin);
-//		wlValName.setLayoutData(fdlValName);
+		// TabFolder
+	    wTabFolder = new CTabFolder(shell, SWT.BORDER);
+	    props.setLook(wTabFolder, Props.WIDGET_STYLE_TAB);
+	    wTabFolder.setSimple(false);	    
+
+        // Start FileTab
+        wFileTab = new CTabItem(wTabFolder, SWT.NONE);
+        wFileTab.setText(Messages.getString("FakeGamePluginDialog.FileTab.TabTitle"));
+        
+        Composite wFileComp = new Composite(wTabFolder, SWT.NONE);
+        props.setLook(wFileComp);
+        
+        FormLayout fileLayout = new FormLayout();
+        fileLayout.marginWidth  = 3;
+        fileLayout.marginHeight = 3;
+        wFileComp.setLayout(fileLayout);	    
 		
-//		wValName=new Text(shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-//        props.setLook( wValName );
-//		wValName.addModifyListener(lsMod);
-//		fdValName=new FormData();
-//		fdValName.left = new FormAttachment(middle, 0);
-//		fdValName.right= new FormAttachment(100, 0);
-//		fdValName.top  = new FormAttachment(wStepname, margin);
-//		wValName.setLayoutData(fdValName);
-		/////////
-		
-		// Value line
-		wlValue=new Label(shell, SWT.RIGHT);
-		wlValue.setText("KECO CANC"); //$NON-NLS-1$
-        props.setLook( wlValue );
-		fdlValue=new FormData();
-		fdlValue.left = new FormAttachment(0, 0);
-		fdlValue.right= new FormAttachment(middle, -margin);
-//		fdlValue.top  = new FormAttachment(wValName, margin);
-		fdlValue.top = new FormAttachment(wStepname, margin);
-		wlValue.setLayoutData(fdlValue);
+        // Filename line
+        wlFilename = new Label(wFileComp, SWT.RIGHT);
+        wlFilename.
+          setText(Messages.getString("FakeGamePluginDialog.Filename.Label"));
+        props.setLook(wlFilename);
+        fdlFilename = new FormData();
+        fdlFilename.left = new FormAttachment(0, 0);
+        fdlFilename.top = new FormAttachment(0, margin);
+        fdlFilename.right = new FormAttachment(middle, -margin);
+        wlFilename.setLayoutData(fdlFilename);  
+        
 
-		wbValue=new Button(shell, SWT.PUSH| SWT.CENTER);
-        props.setLook( wbValue );
-		wbValue.setText(Messages.getString("System.Button.Edit")); //$NON-NLS-1$
-		fdbValue=new FormData();
-		fdbValue.right= new FormAttachment(100, 0);
-//		fdbValue.top  = new FormAttachment(wValName, margin);
-		fdbValue.top = new FormAttachment(wStepname, margin);
-		wbValue.setLayoutData(fdbValue);
+        wbFilename=new Button(wFileComp, SWT.PUSH| SWT.CENTER);
+        props.setLook(wbFilename);
+        wbFilename.setText(Messages.getString("System.Button.Browse"));
+        fdbFilename=new FormData();
+        fdbFilename.right = new FormAttachment(100, 0);
+        fdbFilename.top = new FormAttachment(0, 0);
+        wbFilename.setLayoutData(fdbFilename);
+     
+        // combined text field and env variable widget
+        wFilename = new TextVar(transMeta, wFileComp, 
+                                  SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+        props.setLook(wFilename);
+        wFilename.addModifyListener(lsMod);
+        fdFilename=new FormData();
+        fdFilename.left = new FormAttachment(middle, 0);
+        fdFilename.top = new FormAttachment(0, margin);
+        fdFilename.right = new FormAttachment(wbFilename, -margin);
+        wFilename.setLayoutData(fdFilename);    
+        
+        fdFileComp = new FormData();
+        fdFileComp.left = new FormAttachment(0, 0);
+        fdFileComp.top = new FormAttachment(0, 0);
+        fdFileComp.right = new FormAttachment(100, 0);
+        fdFileComp.bottom = new FormAttachment(100, 0);
+        wFileComp.setLayoutData(fdFileComp);
+        
+        wFileComp.layout();
+        wFileTab.setControl(wFileComp);        
 
-		wValue=new Text(shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-        props.setLook( wValue );
-		wValue.addModifyListener(lsMod);
-		fdValue=new FormData();
-		fdValue.left = new FormAttachment(middle, 0);
-		fdValue.right= new FormAttachment(wbValue, -margin);
-//		fdValue.top  = new FormAttachment(wValName, margin);
-		fdValue.top = new FormAttachment(wStepname, margin);
-		wValue.setLayoutData(fdValue);
+        
+        // Model Tab
+        wModelTab = new CTabItem(wTabFolder, SWT.NONE);
+        wModelTab.setText(Messages.getString("FakeGamePluginDialog.ModelTab.TabTitle"));
+        
+        Composite wModelComp = new Composite(wTabFolder, SWT.NONE);
+        props.setLook(wModelComp);
+        
+        FormLayout modelLayout = new FormLayout();
+        modelLayout.marginWidth  = 3;
+        modelLayout.marginHeight = 3;
+        wModelComp.setLayout(modelLayout);        
+        
+        
+        wModelComp.layout();
+        wModelTab.setControl(wModelComp);
+        
+        wModelText = new Text(wModelComp, 
+                SWT.MULTI | 
+                SWT.BORDER |
+                SWT.V_SCROLL |
+                SWT.H_SCROLL);
+        wModelText.setEditable(false);
+        FontData fd = new FontData("Courier New", 10, SWT.NORMAL);
+        wModelText.setFont(new Font(getParent().getDisplay(), fd));
+        
+        //    m_wModelText.setText(stepname);
+        props.setLook(wModelText);
+        // format the model text area
+        fdModelText = new FormData();
+        fdModelText.left = new FormAttachment(0, 0);
+        fdModelText.top = new FormAttachment(0, margin);
+        fdModelText.right = new FormAttachment(100, 0);
+        fdModelText.bottom = new FormAttachment(100, 0);
+        wModelText.setLayoutData(fdModelText);
+        
+        
+        fdModelComp = new FormData();
+        fdModelComp.left = new FormAttachment(0, 0);
+        fdModelComp.top = new FormAttachment(0, 0);
+        fdModelComp.right = new FormAttachment(100, 0);
+        fdModelComp.bottom = new FormAttachment(100, 0);
+        wModelComp.setLayoutData(fdModelComp);
+        
+        wModelComp.layout();
+        wModelTab.setControl(wModelComp);
+        
+        // Mappings Tab
+        wMappingsTab = new CTabItem(wTabFolder, SWT.NONE);
+        wMappingsTab.setText(Messages.getString("FakeGamePluginDialog.MappingsTab.TabTitle"));
+        
+        Composite wMappingsComp = new Composite(wTabFolder, SWT.NONE);
+        props.setLook(wMappingsComp);
+        
+        FormLayout mappingsLayout = new FormLayout();
+        mappingsLayout.marginWidth  = 3;
+        mappingsLayout.marginHeight = 3;
+        wMappingsComp.setLayout(mappingsLayout);        
+        
+        
+        wMappingsComp.layout();
+        wMappingsTab.setControl(wMappingsComp);
+        
+        wMappingsText = new Text(wMappingsComp, 
+                SWT.MULTI | 
+                SWT.BORDER |
+                SWT.V_SCROLL |
+                SWT.H_SCROLL);
+        wMappingsText.setEditable(false);
+        wMappingsText.setFont(new Font(getParent().getDisplay(), fd));
+        
+        //    m_wMappingsText.setText(stepname);
+        props.setLook(wMappingsText);
+        // format the mappings text area
+        fdMappingsText = new FormData();
+        fdMappingsText.left = new FormAttachment(0, 0);
+        fdMappingsText.top = new FormAttachment(0, margin);
+        fdMappingsText.right = new FormAttachment(100, 0);
+        fdMappingsText.bottom = new FormAttachment(100, 0);
+        wMappingsText.setLayoutData(fdMappingsText);
+        
+        
+        fdMappingsComp = new FormData();
+        fdMappingsComp.left = new FormAttachment(0, 0);
+        fdMappingsComp.top = new FormAttachment(0, 0);
+        fdMappingsComp.right = new FormAttachment(100, 0);
+        fdMappingsComp.bottom = new FormAttachment(100, 0);
+        wMappingsComp.setLayoutData(fdMappingsComp);
+        
+        wMappingsComp.layout();
+        wMappingsTab.setControl(wMappingsComp);        
 
-		wbValue.addSelectionListener(new SelectionAdapter()
-		{
-			public void widgetSelected(SelectionEvent arg0)
-			{
-				ValueMetaAndData v = (ValueMetaAndData) value.clone();
-				EnterValueDialog evd = new EnterValueDialog(shell, SWT.NONE, v.getValueMeta(), v.getValueData());
-				ValueMetaAndData newval = evd.open();
-				if (newval!=null)
-				{
-					value = newval;
-					getData();
-				}
-			}
-		});
-
+        // Put whole TabFolder and wStepname in FormData
+        fdTabFolder = new FormData();
+        fdTabFolder.left  = new FormAttachment(0, 0);
+        fdTabFolder.top   = new FormAttachment(wStepname, margin);
+        fdTabFolder.right = new FormAttachment(100, 0);
+        fdTabFolder.bottom= new FormAttachment(100, -50);
+        wTabFolder.setLayoutData(fdTabFolder);        
+        
+        // bottom buttons
+        
 		// Some buttons
-		wOK=new Button(shell, SWT.PUSH);
+		wOK = new Button(shell, SWT.PUSH);
 		wOK.setText(Messages.getString("System.Button.OK")); //$NON-NLS-1$
-		wCancel=new Button(shell, SWT.PUSH);
+		wCancel = new Button(shell, SWT.PUSH);
 		wCancel.setText(Messages.getString("System.Button.Cancel")); //$NON-NLS-1$
-		wShowDialog = new Button(shell, SWT.PUSH);
-		wShowDialog.setText("Zobrazit dialog 1234");
 
-
-        BaseStepDialog.positionBottomButtons(shell, new Button[] { wOK, wCancel, wShowDialog}, margin, wValue);
+        BaseStepDialog.positionBottomButtons(shell, new Button[] { wOK, wCancel}, margin, wTabFolder);
         
 		// Add listeners
-		lsCancel   = new Listener() { public void handleEvent(Event e) { cancel(); } };
-		lsOK       = new Listener() { public void handleEvent(Event e) { ok();     } };
-		lsShowDialog = new Listener() { public void handleEvent(Event e) { showDialog();     } };
+		lsCancel = new Listener() { public void handleEvent(Event e) { cancel(); } };
+		lsOK = new Listener() { public void handleEvent(Event e) { ok();     } };
 		
 		wCancel.addListener(SWT.Selection, lsCancel);
 		wOK.addListener    (SWT.Selection, lsOK    );
-		wShowDialog.addListener(SWT.Selection, lsShowDialog);
 		
-		
-		
-		
-		lsDef=new SelectionAdapter() { public void widgetDefaultSelected(SelectionEvent e) { ok(); } };
+		lsDef = new SelectionAdapter() { public void widgetDefaultSelected(SelectionEvent e) { ok(); } };
 		wStepname.addSelectionListener( lsDef );
-//		wValName.addSelectionListener( lsDef );
+
 		// Detect X or ALT-F4 or something that kills this window...
 		shell.addShellListener(	new ShellAdapter() { public void shellClosed(ShellEvent e) { cancel(); } } );
 
+        wFilename.addModifyListener(new ModifyListener() {
+            public void modifyText(ModifyEvent e) {
+                wFilename.setToolTipText(transMeta
+                        .environmentSubstitute(wFilename.getText()));
+            }
+        });
+
+        // listen to the file name text box and try to load a model
+        // if the user presses enter
+        wFilename.addSelectionListener(new SelectionAdapter() {
+            public void widgetDefaultSelected(SelectionEvent e) {
+                loadModel(wFilename.getText());
+                visualizeMappings();
+            }
+        });
+
+        wbFilename.addSelectionListener(new SelectionAdapter() {
+            public void widgetSelected(SelectionEvent e) {
+                FileDialog dialog = new FileDialog(shell, SWT.OPEN);
+                String[] extensions = null;
+                String[] filterNames = null;
+                extensions = new String[2];
+                filterNames = new String[2];
+                extensions[0] = "*.net";
+                filterNames[0] = Messages
+                        .getString("FakeGamePluginDialog.FileType.PropertiesModelFile");
+                extensions[1] = "*";
+                filterNames[1] = Messages
+                        .getString("System.FileType.AllFiles");
+                dialog.setFilterExtensions(extensions);
+                
+                if (wFilename.getText() != null) {
+                    dialog.setFileName(transMeta.environmentSubstitute(wFilename.getText()));
+                }
+                dialog.setFilterNames(filterNames);
+
+                if (dialog.open() != null) {
+                    wFilename.setText(dialog.getFilterPath()
+                            + System.getProperty("file.separator")
+                            + dialog.getFileName());
+                    
+                    loadModel(wFilename.getText());
+                    visualizeMappings();
+                }
+            }
+        });
+        
+        wTabFolder.setSelection(0);
+        
 		// Set the shell size, based upon previous time...
 		setSize();
 		getData();
-		input.setChanged(changed);
 		shell.open();
+		
 		while (!shell.isDisposed())
 		{
-		    if (!display.readAndDispatch()) display.sleep();
+		    if (!display.readAndDispatch()) 
+		        display.sleep();
 		}
+		
 		return stepname;
 	}
 	
-	// Read data from input (TextFileInputInfo)
-	/**
-	 * Vlozi data z promenne value do prislusneho formularoveho policka.
-	 */
+	private boolean loadModel(String modelsFileName)
+	{
+	    modelsFileName = transMeta.environmentSubstitute(modelsFileName);
+	    
+        try {
+            currentMeta.setModelsFileName(modelsFileName);
+            String serializedModels = currentMeta.getSerializedModels();
+            if (serializedModels != null)
+            {
+                wModelText.setText(serializedModels);
+            
+                return true;
+            }
+        } catch (KettleStepException e1) {
+            log.logError(
+                    "[FakeGamePluginDialog]",
+                    Messages.getString("FakeGamePluginDialog.Log.FileLoadingError"));
+        }
+        return false;
+	}
+	
+	private void visualizeMappings()
+	{
+        ModelsFacade models = currentMeta.getModels();
+        
+        try {
+            RowMetaInterface inputRowMeta = getInputRowMeta();
+            models.generateMappings(inputRowMeta.getValueMetaList());
+            StringBuilder mappingStr = new StringBuilder();
+            mappingStr.append(Messages.getString("FakeGamePluginDialog.Mapping.Title") + "\n");
+            mappingStr.append("--------------------------------------------\n");
+            
+            int inputIndex = 0;
+            for (String input : models.getInputs())
+            {
+                mappingStr.append(input);
+                mappingStr.append(" => ");
+
+                Integer rowIndex = models.mapInputToRow(inputIndex);
+                if (rowIndex != null)
+                    mappingStr.append("[" + inputRowMeta.getValueMeta(rowIndex).getName() + "]\n");
+                else
+                    mappingStr.append(Messages.getString("FakeGamePluginDialog.Mapping.NoMapping") + "\n");
+                
+                inputIndex++;
+            }
+            
+            wMappingsText.setText(mappingStr.toString());
+        } catch (KettleStepException e) {
+            log.logError(
+                    "[FakeGamePluginDialog]",
+                    Messages.getString("FakeGamePluginDialog.Log.MappingsGenerationError"));
+        }	    
+	}
+	
+	private RowMetaInterface getInputRowMeta() throws KettleStepException
+	{
+	    StepMeta stepMeta = transMeta.findStep(stepname);
+        return transMeta.getPrevStepFields(stepMeta);
+	}
+		
+	// Read data from currentMeta (TextFileInputInfo)
 	public void getData()
 	{
-		wStepname.selectAll();
-		if (value!=null)
-		{
-//			wValName.setText(value.getValueMeta().getName());
-			wValue.setText(value.toString()+" ("+value.toStringMeta()+")"); //$NON-NLS-1$ //$NON-NLS-2$
-		}
+	    if (currentMeta.getModelFileName() != null) {
+	        wFilename.setText(currentMeta.getModelFileName());
+	        wModelText.setText(currentMeta.getSerializedModels());
+	        visualizeMappings();
+	    }
 	}
 	
 	private void cancel()
 	{
 		stepname=null;
-		input.setChanged(changed);
+		currentMeta.setChanged(changed);
+		loadModel(originalMeta.getModelFileName());
+
 		dispose();
 	}
 	
 	private void ok()
 	{
-		stepname = wStepname.getText(); // return value
-        ClassWithConfigBean conf = (ClassWithConfigBean) MainConfigurationTree.getInstance().getRootModule();
-        conf.getCfgBean().toString();
-        Classifiers.getInstance().createNewClassifier(conf); 
-        Classifiers.getInstance().getClassifier(0).getName();		
+		stepname = wStepname.getText();
+		
+		if (!Const.isEmpty(wFilename.getText())) {
+		    loadModel(wFilename.getText());
+		    visualizeMappings();
+		} else {
+		    loadModel(null);
+		}
+		
 		dispose();
 	}
-	
-	private void showDialog()
-	{
-        MainConfigurationTreeDialog.showConfigDialog();	
-	}
-	
-	/**
-	 * Nastavi nazvy dvou kroku, ktere posilaji vstupni stream.
-	 * 
-	 * @param meta
-	 */
-	private void setStepMeta(FakeGamePluginMeta meta)
-	{
-        List<StreamInterface> infoStreams = meta.getStepIOMeta().getInfoStreams();
-
-        String [] stepNames = wValue.getText().split(";");
-        
-        infoStreams.get(0).setStepMeta( transMeta.findStep( stepNames[0] ) );
-        infoStreams.get(1).setStepMeta( transMeta.findStep( stepNames[1] ) );	    
-	}
 }
-;
