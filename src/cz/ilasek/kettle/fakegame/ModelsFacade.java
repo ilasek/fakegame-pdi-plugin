@@ -8,10 +8,14 @@ import game.models.OutputProducer;
 import java.io.DataInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import org.apache.log4j.Logger;
+import org.pentaho.di.core.exception.KettleValueException;
+import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
 
 import com.thoughtworks.xstream.XStream;
@@ -21,12 +25,17 @@ import com.thoughtworks.xstream.io.xml.DomDriver;
 public class ModelsFacade {
     public final Integer NO_MAPPING_FOUND = null;
     
-    private ArrayList<ConnectableClassifier> classifiers = new ArrayList<ConnectableClassifier>();
-    private ArrayList<ConnectableModel> models = new ArrayList<ConnectableModel>();
+    private final Class<?> CLASSIFIER_OUTPUT_TYPE = Integer.class;
+    private final Class<?> MODEL_OUTPUT_TYPE = Double.class;
+    
+    private List<ConnectableClassifier> classifiers = new ArrayList<ConnectableClassifier>();
+    private List<ConnectableModel> models = new ArrayList<ConnectableModel>();
     
     private ArrayList<String> inputs = new ArrayList<String>();
     
     private Integer[] mappings;
+    
+    private Logger logger = Logger.getLogger(ModelsFacade.class);
 
     public void loadClassifiers(DataInputStream config)
     {
@@ -107,14 +116,76 @@ public class ModelsFacade {
     {
         return inputs;
     }
-
-    public ArrayList<ConnectableClassifier> getClassifiers()
+    
+    public List<ModelSignature> getModelsSignatures()
     {
-        return classifiers;
+        List<ModelSignature> modelSignatures = new LinkedList<ModelSignature>();
+
+        for (ConnectableClassifier classifier : classifiers)
+        {
+            modelSignatures.add(new ModelSignature(classifier.getClass().getSimpleName(), CLASSIFIER_OUTPUT_TYPE));
+        }
+        
+        for (ConnectableModel model : models)
+        {
+            modelSignatures.add(new ModelSignature(model.getClass().getSimpleName(), MODEL_OUTPUT_TYPE));
+        }
+        
+        return modelSignatures;
     }
     
-    public ArrayList<ConnectableModel> getModels()
+    public Object[] evaluate(Object[] inputRow, RowMetaInterface rowMeta)
     {
-        return models;
+        int totalModelsCount = classifiers.size() + models.size();
+        Object[] evaluationResult = new Object[totalModelsCount];
+        
+        if (totalModelsCount > 0)
+        {
+            int i = 0;
+            for (ConnectableClassifier classifier : classifiers)
+            {
+                try {
+                    evaluationResult[i] = new Integer(classifier.getOutput(translateRow(inputRow, rowMeta))).longValue();
+                } catch (KettleValueException e) {
+                    evaluationResult[i] = null;
+                    logger.error(Messages.getString("ModelsFacade.Log.KettleValuenError"));
+                }
+                i++;
+            }
+            for (ConnectableModel model : models)
+            {
+                try {
+                    evaluationResult[i] = model.getOutput(translateRow(inputRow, rowMeta));
+                } catch (KettleValueException e) {
+                    evaluationResult[i] = null;
+                    logger.error(Messages.getString("ModelsFacade.Log.KettleValuenError"));
+                }
+                i++;
+            }            
+        }
+        
+        return evaluationResult;
     }
+    
+    private double[] translateRow(Object[] inputRow, RowMetaInterface rowMeta) throws KettleValueException
+    {
+        double[] translatedRow = new double[mappings.length];
+        
+        for (int i = 0; i < mappings.length; i++)
+        {
+            translatedRow[i] = rowMeta.getNumber(inputRow, mapInputToRow(i));
+        }
+        
+        return translatedRow;
+    }
+
+//    public ArrayList<ConnectableClassifier> getClassifiers()
+//    {
+//        return classifiers;
+//    }
+//    
+//    public ArrayList<ConnectableModel> getModels()
+//    {
+//        return models;
+//    }
 }

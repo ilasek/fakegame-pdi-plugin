@@ -93,7 +93,6 @@
 	<classpathentry kind="lib" path="/Kettle/libswt/common.jar"/>
 	<classpathentry kind="lib" path="/Kettle/libswt/jface.jar"/>
 	<classpathentry kind="lib" path="/Kettle/libswt/runtime.jar"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/game-core"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/configurations"/>
+	<classpathentry kind="lib" path="distrib/lib/game-core-1.0-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
