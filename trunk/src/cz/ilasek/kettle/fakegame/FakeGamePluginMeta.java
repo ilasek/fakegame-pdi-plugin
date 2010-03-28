@@ -21,6 +21,7 @@ import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.variables.VariableSpace;
+import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.repository.ObjectId;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.trans.Trans;
@@ -40,7 +41,11 @@ import org.w3c.dom.Node;
 
 public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterface
 {
-    private ModelsFacade evaluableSet;
+    private static final String XML_ROOT_TAG = "fake_game";
+    private static final String MODELS_FILE_NAME_TAG = "file_name";
+    private static final String SERIALIZED_MODELS_TAG = "serialized_models";
+    
+    private ModelsFacade models;
     private String modelsFileName;
     private String serializedModels;
 
@@ -51,7 +56,7 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	
 	public ModelsFacade getModels()
 	{
-	    return evaluableSet;
+	    return models;
 	}
 	
 	public String getModelFileName()
@@ -91,15 +96,15 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	    }
 	}
 	
-	public void setSerializedModels(String serializedModels) throws KettleStepException
+	public void setSerializedModels(String serializedModels)
 	{
 	    this.serializedModels = serializedModels;
 	    
 	    if (serializedModels != null)
 	    {
             ModelsFacade models = new ModelsFacade();
-//            models.loadModels(new DataInputStream(new ByteArrayInputStream(serializedModels.getBytes())));
-            models.loadClassifiers(new DataInputStream(new ByteArrayInputStream(serializedModels.getBytes())));
+            models.loadModels(new DataInputStream(new ByteArrayInputStream(serializedModels.getBytes())));
+//            models.loadClassifiers(new DataInputStream(new ByteArrayInputStream(serializedModels.getBytes())));
 
             setModels(models);
 	    } 
@@ -111,22 +116,19 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	
 	private void setModels(ModelsFacade evaluableSet)
 	{
-	    this.evaluableSet = evaluableSet;
+	    this.models = evaluableSet;
 	}
 
-	// TODO
 	public String getXML()
 	{
-		String retval = "";
+		StringBuffer retval = new StringBuffer();
+		retval.append("<" + XML_ROOT_TAG + ">");
+		retval.append(XMLHandler.addTagValue(MODELS_FILE_NAME_TAG, modelsFileName));
+		retval.append(XMLHandler.addTagValue(SERIALIZED_MODELS_TAG, serializedModels));
 		
-//		retval+="    <values>"+Const.CR;
-//		if (value!=null)
-//		{
-//			retval+=value.getXML();
-//		}
-//		retval+="      </values>"+Const.CR;
-
-		return retval;
+		retval.append("</" + XML_ROOT_TAG + ">");
+		
+		return retval.toString();
 	}
 
 	  /**
@@ -146,14 +148,31 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	   */
 	public void getFields(RowMetaInterface r, String origin, RowMetaInterface[] info, StepMeta nextStep, VariableSpace space)
 	{
-	    ValueMetaInterface resultMeta = new ValueMeta("Evaluation result", ValueMetaInterface.TYPE_NUMBER);
-	    
-	    resultMeta.setLength(12);
-        resultMeta.setPrecision(4);
-        resultMeta.setConversionMask("0.00");
-	    resultMeta.setOrigin(origin);
-	    
-	    r.addValueMeta(resultMeta);
+	    ValueMetaInterface resultMeta;
+	    if (models != null)
+	    {
+    	    for (ModelSignature modelSignature : models.getModelsSignatures())
+    	    {
+    	        if (modelSignature.getOutputType().equals((new Integer(0)).getClass()))
+    	        {
+                    resultMeta = new ValueMeta(
+                            modelSignature.getName(), ValueMetaInterface.TYPE_INTEGER);
+    	        }
+    	        else
+    	        {
+    	            resultMeta = new ValueMeta(
+    	                    modelSignature.getName(), ValueMetaInterface.TYPE_NUMBER);
+    	            resultMeta.setLength(12);
+    	            resultMeta.setPrecision(10);
+    	            resultMeta.setConversionMask("############.#####");
+    	            resultMeta.setDecimalSymbol(".");
+    	        }
+    	        
+        	    resultMeta.setOrigin(origin);
+    	    
+    	        r.addValueMeta(resultMeta);
+    	    }
+	    }
 	}
 
 	// TODO
@@ -163,25 +182,20 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 		return retval;
 	}
 
-	// TODO
 	public void loadXML(Node stepnode, List<DatabaseMeta> databases, Map<String,Counter> counters)
 		throws KettleXMLException
 	{
-//		try
-//		{
-//			value = new ValueMetaAndData();
-//			
-//			Node valnode  = XMLHandler.getSubNode(stepnode, "values", "value");
-//			if (valnode!=null)
-//			{
-//				System.out.println("reading value in "+valnode);
-//				value.loadXML(valnode);
-//			}
-//		}
-//		catch(Exception e)
-//		{
-//			throw new KettleXMLException("Unable to read step info from XML node", e);
-//		}
+        try
+        {
+    	    Node fgNode = XMLHandler.getSubNode(stepnode, XML_ROOT_TAG);
+    	    
+    	    modelsFileName = XMLHandler.getTagValue(fgNode, MODELS_FILE_NAME_TAG);
+            setSerializedModels(XMLHandler.getTagValue(fgNode, SERIALIZED_MODELS_TAG));
+        }
+        catch(Exception e)
+        {
+            throw new KettleXMLException("Unable to read FakeGame step info from XML node", e);
+        }        
 	}
 
     /**
@@ -214,8 +228,8 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	    modelsFileName = null;
 	}
 
-	public void readRep(Repository rep, long id_step, List<DatabaseMeta> databases, Map<String,Counter> counters) throws KettleException
-	{
+//	public void readRep(Repository rep, long id_step, List<DatabaseMeta> databases, Map<String,Counter> counters) throws KettleException
+//	{
 	    // TODO
 //		try
 //		{
@@ -250,11 +264,11 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 //		{
 //			throw new KettleException("Unexpected error reading step with id_step="+id_step+" from the repository", e);
 //		}
-	}
+//	}
 	
 
-	public void saveRep(Repository rep, long id_transformation, long id_step) throws KettleException
-	{
+//	public void saveRep(Repository rep, long id_transformation, long id_step) throws KettleException
+//	{
 	    // TODO
 //		try
 //		{
@@ -269,7 +283,7 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 //		{
 //			throw new KettleException("Unable to save step information to the repository, id_step="+id_step, dbe);
 //		}
-	}
+//	}
 
     /**
      * Check the settings of this step and put findings in a remarks list.
@@ -316,8 +330,8 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 			remarks.add(cr);
 		}
 		
-	    if (evaluableSet == null) {
-            cr = new CheckResult(CheckResult.TYPE_RESULT_ERROR, "Step does not have access to a usable evaluableSet!", stepMeta);
+	    if (models == null) {
+            cr = new CheckResult(CheckResult.TYPE_RESULT_ERROR, "Step does not have access to a usable models!", stepMeta);
             remarks.add(cr);
 	    }		
 	}
@@ -367,15 +381,20 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	}
 
     @Override
-    public void readRep(Repository arg0, ObjectId arg1,
-            List<DatabaseMeta> arg2, Map<String, Counter> arg3)
-            throws KettleException {
-        // TODO To implement
+    public void readRep(Repository rep, ObjectId idStep,
+            List<DatabaseMeta> databases, Map<String, Counter> counters)
+            throws KettleException 
+    {
+        modelsFileName = rep.getStepAttributeString(idStep, MODELS_FILE_NAME_TAG);
+        setSerializedModels(rep.getStepAttributeString(idStep, SERIALIZED_MODELS_TAG));
+        
     }
 
     @Override
-    public void saveRep(Repository arg0, ObjectId arg1, ObjectId arg2)
-            throws KettleException {
-        // TODO to implement
+    public void saveRep(Repository rep, ObjectId idTransformation,
+            ObjectId idStep) throws KettleException 
+    {
+        rep.saveStepAttribute(idTransformation, idStep, MODELS_FILE_NAME_TAG, modelsFileName);
+        rep.saveStepAttribute(idTransformation, idStep, SERIALIZED_MODELS_TAG, serializedModels);
     }
 }

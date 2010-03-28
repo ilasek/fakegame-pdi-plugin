@@ -8,7 +8,7 @@
    classname="cz.ilasek.kettle.fakegame.FakeGamePluginMeta">
    <libraries>
         <library name="fakegameplugin.jar"/>
-        <library name="fakegame.jar"/>
+        <library name="lib/game-core-1.0-SNAPSHOT.jar"/>
         <library name="lib/configurations-0.6.1-SNAPSHOT.jar"/>
         <library name="lib/activation-1.1.jar"/>
         <library name="lib/asm-commons-3.0.jar"/>

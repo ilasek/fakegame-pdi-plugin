@@ -56,7 +56,7 @@ public class FakeGamePlugin extends BaseStep implements StepInterface
         first = false;
         data.setOutputRowMeta(getInputRowMeta().clone());
         
-        // TODO check if inputs match
+        meta.getModels().generateMappings(getInputRowMeta().getValueMetaList());
         
         meta.getFields(data.getOutputRowMeta(), getStepname(), null, null, this);        
     }
@@ -66,9 +66,13 @@ public class FakeGamePlugin extends BaseStep implements StepInterface
         Object[] outputRow = RowDataUtil.resizeArray(inputRow, data.getOutputRowMeta().size());
         int resultIndex = getInputRowMeta().size();
         
-        // TODO evaluation result instead of Integer(1)
-        outputRow[resultIndex] = new Double(1);
-        ////////////////////////
+        Object[] evaluationResults = meta.getModels().evaluate(inputRow, getInputRowMeta());
+        
+        for (Object result : evaluationResults)
+        {
+            outputRow[resultIndex] = result;
+            resultIndex++;
+        }
         
         return outputRow;
     }
