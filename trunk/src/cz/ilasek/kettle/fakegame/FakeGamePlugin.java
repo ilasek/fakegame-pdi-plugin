@@ -2,6 +2,7 @@ package cz.ilasek.kettle.fakegame;
 
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
+import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
@@ -61,7 +62,7 @@ public class FakeGamePlugin extends BaseStep implements StepInterface
         meta.getFields(data.getOutputRowMeta(), getStepname(), null, null, this);        
     }
     
-    private Object[] evalueateModel(Object[] inputRow)
+    private Object[] evalueateModel(Object[] inputRow) throws KettleValueException
     {
         Object[] outputRow = RowDataUtil.resizeArray(inputRow, data.getOutputRowMeta().size());
         int resultIndex = getInputRowMeta().size();

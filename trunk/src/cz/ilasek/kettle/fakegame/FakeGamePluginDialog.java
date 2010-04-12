@@ -5,11 +5,6 @@
 
 package cz.ilasek.kettle.fakegame;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
@@ -62,6 +57,12 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 	private FormData fdbFilename;
 	private TextVar wFilename;
 	private FormData fdFilename;
+	
+	private Label wOutputProbsLab;
+	private Button wOutputProbs;
+	private FormData fdlOutputProbs;
+	private FormData fdOutputProbs;
+	
 	private FormData fdFileComp;
 	
 	private Text wModelText;
@@ -191,6 +192,23 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
         fdFilename.top = new FormAttachment(0, margin);
         fdFilename.right = new FormAttachment(wbFilename, -margin);
         wFilename.setLayoutData(fdFilename);    
+        
+        wOutputProbsLab = new Label(wFileComp, SWT.RIGHT);
+        wOutputProbsLab.setText(Messages.getString("FakeGamePluginDialog.OutputProbs.Label"));
+        props.setLook(wOutputProbsLab);
+        fdlOutputProbs = new FormData();
+        fdlOutputProbs.left = new FormAttachment(0, 0);
+        fdlOutputProbs.top = new FormAttachment(wFilename, margin);
+        fdlOutputProbs.right = new FormAttachment(middle, -margin);
+        wOutputProbsLab.setLayoutData(fdlOutputProbs);
+        wOutputProbs = new Button(wFileComp, SWT.CHECK);
+        props.setLook(wOutputProbs);
+        fdOutputProbs = new FormData();
+        fdOutputProbs.left = new FormAttachment(middle, 0);
+        fdOutputProbs.top = new FormAttachment(wFilename, margin);
+        fdOutputProbs.right = new FormAttachment(100, 0);
+        wOutputProbs.setLayoutData(fdOutputProbs);
+        
         
         fdFileComp = new FormData();
         fdFileComp.left = new FormAttachment(0, 0);
@@ -454,6 +472,7 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 	{
 	    if (currentMeta.getModelFileName() != null) {
 	        wFilename.setText(currentMeta.getModelFileName());
+	        wOutputProbs.setSelection(currentMeta.isShowOutputProbabilities());
 	        wModelText.setText(currentMeta.getSerializedModels());
 	        visualizeMappings();
 	    }
@@ -471,6 +490,7 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 	private void ok()
 	{
 		stepname = wStepname.getText();
+		currentMeta.setShowOutputProbabilities(wOutputProbs.getSelection());
 		
 		if (!Const.isEmpty(wFilename.getText())) {
 		    loadModel(wFilename.getText());

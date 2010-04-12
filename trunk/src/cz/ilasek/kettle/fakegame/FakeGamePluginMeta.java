@@ -43,11 +43,15 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 {
     private static final String XML_ROOT_TAG = "fake_game";
     private static final String MODELS_FILE_NAME_TAG = "file_name";
+    private static final String OUTPUT_PROBABILITIES_TAG = "show_output_probabilities";
     private static final String SERIALIZED_MODELS_TAG = "serialized_models";
+    
+    private static final String CLASSIFIER_IDENTIFICATION = "ConnectableClassifier";
     
     private ModelsFacade models;
     private String modelsFileName;
     private String serializedModels;
+    private boolean showOutputProbabilities;
 
 	public FakeGamePluginMeta()
 	{
@@ -103,9 +107,12 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	    if (serializedModels != null)
 	    {
             ModelsFacade models = new ModelsFacade();
-            models.loadModels(new DataInputStream(new ByteArrayInputStream(serializedModels.getBytes())));
-//            models.loadClassifiers(new DataInputStream(new ByteArrayInputStream(serializedModels.getBytes())));
-
+            if (serializedModels.contains(CLASSIFIER_IDENTIFICATION))
+                models.loadClassifiers(new DataInputStream(new ByteArrayInputStream(serializedModels.getBytes())));
+            else
+                models.loadModels(new DataInputStream(new ByteArrayInputStream(serializedModels.getBytes())));
+            models.setShowOutputProbabilities(showOutputProbabilities);
+            
             setModels(models);
 	    } 
 	    else 
@@ -125,6 +132,9 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 		retval.append("<" + XML_ROOT_TAG + ">");
 		retval.append(XMLHandler.addTagValue(MODELS_FILE_NAME_TAG, modelsFileName));
 		retval.append(XMLHandler.addTagValue(SERIALIZED_MODELS_TAG, serializedModels));
+		
+		if (showOutputProbabilities)
+		    retval.append(XMLHandler.addTagValue(OUTPUT_PROBABILITIES_TAG, showOutputProbabilities));
 		
 		retval.append("</" + XML_ROOT_TAG + ">");
 		
@@ -153,7 +163,7 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	    {
     	    for (ModelSignature modelSignature : models.getModelsSignatures())
     	    {
-    	        if (modelSignature.getOutputType().equals((new Integer(0)).getClass()))
+    	        if (modelSignature.getOutputType().equals(Integer.class))
     	        {
                     resultMeta = new ValueMeta(
                             modelSignature.getName(), ValueMetaInterface.TYPE_INTEGER);
@@ -175,10 +185,11 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	    }
 	}
 
-	// TODO
 	public Object clone()
 	{
-		Object retval = super.clone();
+		FakeGamePluginMeta retval = (FakeGamePluginMeta) super.clone();
+		retval.setSerializedModels(serializedModels);
+		
 		return retval;
 	}
 
@@ -190,7 +201,14 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
     	    Node fgNode = XMLHandler.getSubNode(stepnode, XML_ROOT_TAG);
     	    
     	    modelsFileName = XMLHandler.getTagValue(fgNode, MODELS_FILE_NAME_TAG);
-            setSerializedModels(XMLHandler.getTagValue(fgNode, SERIALIZED_MODELS_TAG));
+    	    
+    	    String outputProbStr = XMLHandler.getTagValue(fgNode, OUTPUT_PROBABILITIES_TAG);
+    	    if (outputProbStr.equalsIgnoreCase("N"))
+    	        setShowOutputProbabilities(false);
+    	    else
+    	        setShowOutputProbabilities(true);
+            
+	        setSerializedModels(XMLHandler.getTagValue(fgNode, SERIALIZED_MODELS_TAG));
         }
         catch(Exception e)
         {
@@ -226,6 +244,18 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	public void setDefault()
 	{
 	    modelsFileName = null;
+	}
+	
+	public void setShowOutputProbabilities(boolean showOutputProbabilities)
+	{
+	    this.showOutputProbabilities = showOutputProbabilities;
+	    if (models != null)
+	        models.setShowOutputProbabilities(showOutputProbabilities);
+	}
+	
+	public boolean isShowOutputProbabilities()
+	{
+	    return showOutputProbabilities;
 	}
 
 //	public void readRep(Repository rep, long id_step, List<DatabaseMeta> databases, Map<String,Counter> counters) throws KettleException
@@ -386,8 +416,8 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
             throws KettleException 
     {
         modelsFileName = rep.getStepAttributeString(idStep, MODELS_FILE_NAME_TAG);
+        showOutputProbabilities = rep.getStepAttributeBoolean(idStep, OUTPUT_PROBABILITIES_TAG);
         setSerializedModels(rep.getStepAttributeString(idStep, SERIALIZED_MODELS_TAG));
-        
     }
 
     @Override
@@ -395,6 +425,7 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
             ObjectId idStep) throws KettleException 
     {
         rep.saveStepAttribute(idTransformation, idStep, MODELS_FILE_NAME_TAG, modelsFileName);
+        rep.saveStepAttribute(idTransformation, idStep, OUTPUT_PROBABILITIES_TAG, showOutputProbabilities);
         rep.saveStepAttribute(idTransformation, idStep, SERIALIZED_MODELS_TAG, serializedModels);
     }
 }

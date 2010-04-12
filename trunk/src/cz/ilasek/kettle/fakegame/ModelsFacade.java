@@ -26,10 +26,13 @@ public class ModelsFacade {
     public final Integer NO_MAPPING_FOUND = null;
     
     private final Class<?> CLASSIFIER_OUTPUT_TYPE = Integer.class;
+    private final Class<?> CLASSIFIER_PROBABILITY_OUTPUT_TYPE = Double.class;
     private final Class<?> MODEL_OUTPUT_TYPE = Double.class;
     
     private List<ConnectableClassifier> classifiers = new ArrayList<ConnectableClassifier>();
     private List<ConnectableModel> models = new ArrayList<ConnectableModel>();
+    
+    private boolean showOutputProbabilities = false;
     
     private ArrayList<String> inputs = new ArrayList<String>();
     
@@ -123,34 +126,54 @@ public class ModelsFacade {
 
         for (ConnectableClassifier classifier : classifiers)
         {
-            modelSignatures.add(new ModelSignature(classifier.getClass().getSimpleName(), CLASSIFIER_OUTPUT_TYPE));
+            String classifierClass = classifier.getClassifier().getClass().getSimpleName();
+            
+            if (showOutputProbabilities)
+            {
+                int outputProbabilitiesCount = classifier.getOutputProbabilities().length;
+                for (int i = 0; i < outputProbabilitiesCount; i++)
+                {
+                    modelSignatures.add(new ModelSignature(classifierClass + "_" + i, CLASSIFIER_PROBABILITY_OUTPUT_TYPE));
+                }
+            }
+            else
+                modelSignatures.add(new ModelSignature(classifierClass, CLASSIFIER_OUTPUT_TYPE));
         }
         
         for (ConnectableModel model : models)
         {
-            modelSignatures.add(new ModelSignature(model.getClass().getSimpleName(), MODEL_OUTPUT_TYPE));
+            modelSignatures.add(new ModelSignature(
+                    model.getModel().getClass().getSimpleName() + "_" + model.getName(), 
+                    MODEL_OUTPUT_TYPE));
         }
         
         return modelSignatures;
     }
     
-    public Object[] evaluate(Object[] inputRow, RowMetaInterface rowMeta)
+    public Object[] evaluate(Object[] inputRow, RowMetaInterface rowMeta) throws KettleValueException
     {
-        int totalModelsCount = classifiers.size() + models.size();
-        Object[] evaluationResult = new Object[totalModelsCount];
+        int totalResultsCount = getModelsSignatures().size();
+        Object[] evaluationResult = new Object[totalResultsCount];
         
-        if (totalModelsCount > 0)
+        if (totalResultsCount > 0)
         {
             int i = 0;
             for (ConnectableClassifier classifier : classifiers)
             {
-                try {
-                    evaluationResult[i] = new Integer(classifier.getOutput(translateRow(inputRow, rowMeta))).longValue();
-                } catch (KettleValueException e) {
-                    evaluationResult[i] = null;
-                    logger.error(Messages.getString("ModelsFacade.Log.KettleValuenError"));
+                if (showOutputProbabilities)
+                {
+                    double[] outputProbabilties = classifier.getOutputProbabilities(translateRow(inputRow, rowMeta));
+                    for (double outputProbability : outputProbabilties)
+                    {
+                        evaluationResult[i] = new Double(outputProbability);
+                        i++;
+                    }
                 }
-                i++;
+                else
+                {
+                    evaluationResult[i] = new Integer(classifier.getOutput(translateRow(inputRow, rowMeta))).longValue();
+                    i++;
+                }
             }
             for (ConnectableModel model : models)
             {
@@ -179,13 +202,17 @@ public class ModelsFacade {
         return translatedRow;
     }
 
-//    public ArrayList<ConnectableClassifier> getClassifiers()
-//    {
-//        return classifiers;
-//    }
-//    
-//    public ArrayList<ConnectableModel> getModels()
-//    {
-//        return models;
-//    }
-}
+    /**
+     * @param showOutputProbabilities the showOutputProbabilities to set
+     */
+    public void setShowOutputProbabilities(boolean showOutputProbabilities) {
+        this.showOutputProbabilities = showOutputProbabilities;
+    }
+
+    /**
+     * @return the showOutputProbabilities
+     */
+    public boolean isShowOutputProbabilities() {
+        return showOutputProbabilities;
+    }
+}                                                                                                                                                                         
