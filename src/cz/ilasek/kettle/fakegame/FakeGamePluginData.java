@@ -12,8 +12,7 @@ import org.pentaho.di.trans.step.StepDataInterface;
 /**
  * 
  * 
- * @author Matt
- * @since  24-mrt-2005
+ * @author Ivo Lasek
  */
 public class FakeGamePluginData extends BaseStepData implements StepDataInterface
 {
