@@ -33,7 +33,7 @@ public class FakeGamePluginTest {
         Trans trans = new Trans();
         StepMeta stepMeta = new StepMeta();
         stepMeta.setName("step name");
-        
+        //test
         plugin = new FakeGamePlugin(stepMeta, data, 1, transMeta, trans);
     }
 
