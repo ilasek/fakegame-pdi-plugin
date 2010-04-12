@@ -132,9 +132,8 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 		retval.append("<" + XML_ROOT_TAG + ">");
 		retval.append(XMLHandler.addTagValue(MODELS_FILE_NAME_TAG, modelsFileName));
 		retval.append(XMLHandler.addTagValue(SERIALIZED_MODELS_TAG, serializedModels));
-		
-		if (showOutputProbabilities)
-		    retval.append(XMLHandler.addTagValue(OUTPUT_PROBABILITIES_TAG, showOutputProbabilities));
+	
+	    retval.append(XMLHandler.addTagValue(OUTPUT_PROBABILITIES_TAG, showOutputProbabilities));
 		
 		retval.append("</" + XML_ROOT_TAG + ">");
 		

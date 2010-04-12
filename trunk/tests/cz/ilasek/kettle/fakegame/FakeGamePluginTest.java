@@ -3,70 +3,44 @@
  */
 package cz.ilasek.kettle.fakegame;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
 
-import org.junit.Before;
+import java.util.List;
+
 import org.junit.Test;
+import org.pentaho.di.core.KettleEnvironment;
+import org.pentaho.di.core.RowMetaAndData;
+import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
-import org.pentaho.di.trans.step.StepMeta;
 
 /**
- * @author ivo
+ * Test set for plugin class {@link FakeGamePlugin}.
+ * 
+ * @author Ivo Lasek
  *
  */
 public class FakeGamePluginTest {
     
-    private FakeGamePlugin plugin;
-    private FakeGamePluginMeta meta;
-    private FakeGamePluginData data;
-
-    /**
-     * @throws java.lang.Exception
-     */
-    @Before
-    public void setUp() throws Exception {
-        meta = new FakeGamePluginMeta();
-        data = new FakeGamePluginData();
-        
-        TransMeta transMeta = new TransMeta();
-        Trans trans = new Trans();
-        StepMeta stepMeta = new StepMeta();
-        stepMeta.setName("step name");
-        //test
-        plugin = new FakeGamePlugin(stepMeta, data, 1, transMeta, trans);
-    }
-
-    /**
-     * Test method for {@link cz.ilasek.kettle.fakegame.FakeGamePlugin#init(org.pentaho.di.trans.step.StepMetaInterface, org.pentaho.di.trans.step.StepDataInterface)}.
-     */
-    @Test
-    public void testInit() {
-        fail("Not yet implemented");
-    }
-
-    /**
-     * Test method for {@link cz.ilasek.kettle.fakegame.FakeGamePlugin#processRow(org.pentaho.di.trans.step.StepMetaInterface, org.pentaho.di.trans.step.StepDataInterface)}.
-     */
-    @Test
-    public void testProcessRow() {
-        fail("Not yet implemented");
-    }
-
-    /**
-     * Test method for {@link cz.ilasek.kettle.fakegame.FakeGamePlugin#FakeGamePlugin(org.pentaho.di.trans.step.StepMeta, org.pentaho.di.trans.step.StepDataInterface, int, org.pentaho.di.trans.TransMeta, org.pentaho.di.trans.Trans)}.
-     */
-    @Test
-    public void testFakeGamePlugin() {
-        fail("Not yet implemented");
-    }
-
+    private static final String TRANSFORMATION_FILE = "resources/test/transformation.ktr";
+    
     /**
      * Test method for {@link cz.ilasek.kettle.fakegame.FakeGamePlugin#run()}.
+     * @throws KettleException 
      */
     @Test
-    public void testRun() {
-        fail("Not yet implemented");
+    public void testRun() throws KettleException {
+        KettleEnvironment.init();
+        TransMeta transMeta = new TransMeta(TRANSFORMATION_FILE);
+        Trans trans = new Trans(transMeta);
+
+        trans.execute(null);
+        trans.waitUntilFinished();
+        
+        assertEquals(0, trans.getResult().getExitStatus());
+        List<RowMetaAndData> rows = trans.getResult().getRows();
+        assertEquals(new Long(0), rows.get(0).getInteger(7));
+        assertEquals("ClassifierModel", rows.get(0).getRowMeta().getFieldNames()[7]);
     }
 
 }
