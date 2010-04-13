@@ -7,23 +7,45 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import java.util.LinkedList;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.pentaho.di.core.CheckResultInterface;
+import org.pentaho.di.core.KettleEnvironment;
+import org.pentaho.di.core.database.DatabaseMeta;
+import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.xml.XMLHandler;
+import org.pentaho.di.repository.LongObjectId;
+import org.pentaho.di.repository.ObjectId;
+import org.pentaho.di.repository.Repository;
+import org.pentaho.di.repository.RepositoryCapabilities;
+import org.pentaho.di.repository.RepositoryMeta;
+import org.pentaho.di.repository.filerep.KettleFileRepository;
+import org.pentaho.di.repository.filerep.KettleFileRepositoryMeta;
+import org.pentaho.di.trans.Trans;
+import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.trans.step.StepDataInterface;
+import org.pentaho.di.trans.step.StepInterface;
+import org.pentaho.di.trans.step.StepMeta;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 
 /**
- * @author ivo
+ * Test set for class {@link FakeGamePluginMeta}.
+ * @author Ivo Lasek
  *
  */
 public class FakeGamePluginMetaTest {
     private static final String CLASS_FILE = "resources/test/iris-classify-poly3.net";
     private static final String MODEL_FILE = "resources/test/iris-poly5.net";
+    
+    private static final String TRANSFORMATION_FILE = "resources/test/transformation.ktr";
     
     private FakeGamePluginMeta classMeta;
     private FakeGamePluginMeta modelMeta;
@@ -159,10 +181,14 @@ public class FakeGamePluginMetaTest {
 
     /**
      * Test method for {@link cz.ilasek.kettle.fakegame.FakeGamePluginMeta#equals(java.lang.Object)}.
+     * @throws KettleStepException 
      */
     @Test
-    public void testEqualsObject() {
-        fail("Not yet implemented");
+    public void testEqualsObject() throws KettleStepException {
+        assertFalse(classMeta.equals(modelMeta));
+        FakeGamePluginMeta tmpMeta =  new FakeGamePluginMeta();
+        tmpMeta.setModelsFileName(CLASS_FILE);
+        assertTrue(classMeta.equals(tmpMeta));
     }
 
     /**
@@ -170,7 +196,9 @@ public class FakeGamePluginMetaTest {
      */
     @Test
     public void testSetDefault() {
-        fail("Not yet implemented");
+        classMeta.setDefault();
+        FakeGamePluginMeta tmpMeta = new FakeGamePluginMeta();
+        assertTrue(classMeta.equals(tmpMeta));
     }
 
     /**
@@ -178,7 +206,10 @@ public class FakeGamePluginMetaTest {
      */
     @Test
     public void testSetShowOutputProbabilities() {
-        fail("Not yet implemented");
+        classMeta.setShowOutputProbabilities(true);
+        assertTrue(classMeta.isShowOutputProbabilities());
+        classMeta.setShowOutputProbabilities(false);
+        assertFalse(classMeta.isShowOutputProbabilities());
     }
 
     /**
@@ -186,7 +217,10 @@ public class FakeGamePluginMetaTest {
      */
     @Test
     public void testIsShowOutputProbabilities() {
-        fail("Not yet implemented");
+        classMeta.setShowOutputProbabilities(true);
+        assertTrue(classMeta.isShowOutputProbabilities());
+        classMeta.setShowOutputProbabilities(false);
+        assertFalse(classMeta.isShowOutputProbabilities());
     }
 
     /**
@@ -194,23 +228,28 @@ public class FakeGamePluginMetaTest {
      */
     @Test
     public void testCheck() {
-        fail("Not yet implemented");
-    }
-
-    /**
-     * Test method for {@link cz.ilasek.kettle.fakegame.FakeGamePluginMeta#getDialog(org.eclipse.swt.widgets.Shell, org.pentaho.di.trans.step.StepMetaInterface, org.pentaho.di.trans.TransMeta, java.lang.String)}.
-     */
-    @Test
-    public void testGetDialog() {
-        fail("Not yet implemented");
+        String[] input = new String[2]; 
+        List<CheckResultInterface> results = new LinkedList<CheckResultInterface>();
+        modelMeta.check(results, new TransMeta(), new StepMeta(), null, input, null, null);
+        
+        assertEquals("Not receiving any fields from previous steps!", results.get(0).getText());
+        assertTrue(results.size() == 2);
     }
 
     /**
      * Test method for {@link cz.ilasek.kettle.fakegame.FakeGamePluginMeta#getStep(org.pentaho.di.trans.step.StepMeta, org.pentaho.di.trans.step.StepDataInterface, int, org.pentaho.di.trans.TransMeta, org.pentaho.di.trans.Trans)}.
+     * @throws KettleException 
      */
     @Test
-    public void testGetStep() {
-        fail("Not yet implemented");
+    public void testGetStep() throws KettleException {
+        KettleEnvironment.init();
+        TransMeta transMeta = new TransMeta(TRANSFORMATION_FILE);
+        Trans trans = new Trans(transMeta);
+        trans.prepareExecution(null);
+        StepInterface step = trans.findRunThread("FakeGame Plugin");
+        
+        FakeGamePlugin plugin = (FakeGamePlugin) classMeta.getStep(step.getStepMeta(), new FakeGamePluginData(), 0, transMeta, trans);
+        assertFalse(plugin == null);
     }
 
     /**
@@ -218,23 +257,31 @@ public class FakeGamePluginMetaTest {
      */
     @Test
     public void testGetStepData() {
-        fail("Not yet implemented");
+        StepDataInterface data = classMeta.getStepData();
+        assertFalse(data == null);
+        assertTrue(data instanceof StepDataInterface);
     }
 
     /**
      * Test method for {@link cz.ilasek.kettle.fakegame.FakeGamePluginMeta#readRep(org.pentaho.di.repository.Repository, org.pentaho.di.repository.ObjectId, java.util.List, java.util.Map)}.
+     * @throws KettleException 
      */
     @Test
-    public void testReadRep() {
-        fail("Not yet implemented");
+    public void testReadRep() throws KettleException {
+        ObjectId idStep = new LongObjectId(1l);
+        classMeta.readRep(new KettleFileRepository(), idStep, null, null);
     }
 
     /**
      * Test method for {@link cz.ilasek.kettle.fakegame.FakeGamePluginMeta#saveRep(org.pentaho.di.repository.Repository, org.pentaho.di.repository.ObjectId, org.pentaho.di.repository.ObjectId)}.
+     * @throws KettleException 
      */
     @Test
-    public void testSaveRep() {
-        fail("Not yet implemented");
+    public void testSaveRep() throws KettleException {
+        KettleFileRepository repository = new KettleFileRepository();
+        ObjectId idStep = new LongObjectId(1l);
+        ObjectId idTrans = new LongObjectId(2l);
+        classMeta.saveRep(repository, idStep, idTrans);
     }
 
 }
