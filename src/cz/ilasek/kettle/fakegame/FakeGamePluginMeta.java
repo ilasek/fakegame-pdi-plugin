@@ -225,7 +225,7 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
     public boolean equals(Object obj) {
         if (obj != null && (obj.getClass().equals(this.getClass()))) {
             FakeGamePluginMeta m = (FakeGamePluginMeta) obj;
-            return (getXML() == m.getXML());
+            return (getXML().equals(m.getXML()));
         }
 
         return false;
@@ -243,6 +243,8 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	public void setDefault()
 	{
 	    modelsFileName = null;
+	    serializedModels = null;
+	    showOutputProbabilities = false;
 	}
 	
 	public void setShowOutputProbabilities(boolean showOutputProbabilities)
