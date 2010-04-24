@@ -21,25 +21,55 @@ import org.pentaho.di.core.row.ValueMetaInterface;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 
-
+/**
+ * Class serves as a unified interface for classifiers and models from FAKE GAME.
+ * 
+ * @author Ivo Lasek
+ *
+ */
 public class ModelsFacade {
+    /** 
+     * Signals that there is no suitable mappings of the inputs in transformation
+     * to the inputs ofg models.
+     */
     public final Integer NO_MAPPING_FOUND = null;
     
     private final Class<?> CLASSIFIER_OUTPUT_TYPE = Integer.class;
     private final Class<?> CLASSIFIER_PROBABILITY_OUTPUT_TYPE = Double.class;
     private final Class<?> MODEL_OUTPUT_TYPE = Double.class;
     
+    /**
+     * Classifiers hidden behind this facade.
+     */
     private List<ConnectableClassifier> classifiers = new ArrayList<ConnectableClassifier>();
+    /**
+     * Models hidden behind this facade.
+     */
     private List<ConnectableModel> models = new ArrayList<ConnectableModel>();
     
+    /**
+     * Show output probabilities as the output of classifiers or not (show the 
+     * class instead).
+     */
     private boolean showOutputProbabilities = false;
     
+    /**
+     * Inputs required by models and classifiers.
+     */
     private ArrayList<String> inputs = new ArrayList<String>();
     
+    /**
+     * Generated mappings of the inputs.
+     */
     private Integer[] mappings;
     
     private Logger logger = Logger.getLogger(ModelsFacade.class);
 
+    /**
+     * Loads serialized classifiers.
+     * 
+     * @param config Stream containing serialized classifiers.
+     */
     public void loadClassifiers(DataInputStream config)
     {
         XStream xstream = new XStream(new DomDriver());
@@ -49,6 +79,11 @@ public class ModelsFacade {
         loadInputs();
     }
     
+    /**
+     * Loads serialized models.
+     * 
+     * @param config Stream containing serialized models.
+     */    
     public void loadModels(DataInputStream config)
     {
         XStream xstream = new XStream(new DomDriver());
@@ -58,6 +93,11 @@ public class ModelsFacade {
         loadInputs();
     }
     
+    /**
+     * Maps input of models to inputs coming from transformation to the plugin.
+     * 
+     * @param incommingHeader Inputs coming to the plugin. 
+     */
     public void generateMappings(List<ValueMetaInterface> incommingHeader)
     {
         mappings = new Integer[inputs.size()];
@@ -70,22 +110,35 @@ public class ModelsFacade {
         }
     }
     
+    /**
+     * Transform the inputs of plugin into a map, where key is a name of column
+     * and value is its position.
+     *  
+     * @param incommingHeader
+     * @return
+     */
     public static Map<String, Integer> formHeaderMap(List<ValueMetaInterface> incommingHeader)
     {
         Map<String, Integer> map = new HashMap<String, Integer>();
         int i = 0;
         for (ValueMetaInterface valueMeta : incommingHeader)
         {
-            if (valueMeta.isNumeric())
-            {
-                map.put(valueMeta.getName(), i);
-            }
+//            if (valueMeta.isNumeric())
+//            {
+            map.put(valueMeta.getName(), i);
+//            }
             i++;
         }
         
         return map;
     }
     
+    /**
+     * Loads inputs of the models. Kind of input is determined by the first model 
+     * or classifier. Inputs of all the classifiers must thus be the same. 
+     * 
+     * @return
+     */
     private ArrayList<String> loadInputs()
     {
         Vector<OutputProducer> inputsVector = new Vector<OutputProducer>();
@@ -110,6 +163,12 @@ public class ModelsFacade {
         return inputs;
     }
     
+    /**
+     * Returns position of models input in the incoming row.
+     * 
+     * @param inputIndex Index of a model input. 
+     * @return Corresponding index in an incoming row. 
+     */
     public Integer mapInputToRow(int inputIndex)
     {
         return mappings[inputIndex];
@@ -120,6 +179,10 @@ public class ModelsFacade {
         return inputs;
     }
     
+    /**
+     * Returns names and types of the outputs of all stored models and classifiers.
+     * @return
+     */
     public List<ModelSignature> getModelsSignatures()
     {
         List<ModelSignature> modelSignatures = new LinkedList<ModelSignature>();
@@ -150,6 +213,14 @@ public class ModelsFacade {
         return modelSignatures;
     }
     
+    /**
+     * Evaluates the input based on stored model.
+     * 
+     * @param inputRow
+     * @param rowMeta
+     * @return
+     * @throws KettleValueException
+     */
     public Object[] evaluate(Object[] inputRow, RowMetaInterface rowMeta) throws KettleValueException
     {
         int totalResultsCount = getModelsSignatures().size();
@@ -177,12 +248,8 @@ public class ModelsFacade {
             }
             for (ConnectableModel model : models)
             {
-                try {
-                    evaluationResult[i] = model.getOutput(translateRow(inputRow, rowMeta));
-                } catch (KettleValueException e) {
-                    evaluationResult[i] = null;
-                    logger.error(Messages.getString("ModelsFacade.Log.KettleValuenError"));
-                }
+                evaluationResult[i] = model.getOutput(translateRow(inputRow, rowMeta));
+
                 i++;
             }            
         }
@@ -190,13 +257,19 @@ public class ModelsFacade {
         return evaluationResult;
     }
     
-    private double[] translateRow(Object[] inputRow, RowMetaInterface rowMeta) throws KettleValueException
+    private double[] translateRow(Object[] inputRow, RowMetaInterface rowMeta)
     {
         double[] translatedRow = new double[mappings.length];
         
         for (int i = 0; i < mappings.length; i++)
         {
-            translatedRow[i] = rowMeta.getNumber(inputRow, mapInputToRow(i));
+            int rowIndex = mapInputToRow(i);
+            try {
+                translatedRow[i] = rowMeta.getNumber(inputRow, rowIndex);
+            } catch (KettleValueException e)
+            {
+                translatedRow[i] = Double.NaN;
+            }
         }
         
         return translatedRow;
