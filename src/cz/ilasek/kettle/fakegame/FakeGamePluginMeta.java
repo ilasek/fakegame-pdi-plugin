@@ -73,27 +73,30 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	    return serializedModels;
 	}
 	
-	public void setModelsFileName(String modelsFileName) throws KettleStepException
+	public void setModelsFileName(String modelsFileName, TransMeta transMeta) throws KettleStepException
 	{
 	    this.modelsFileName = modelsFileName;
 	    if (modelsFileName != null)
 	    {
     	    StringBuilder serializedModel = new StringBuilder();
+    	    String realFileName = transMeta.environmentSubstitute(modelsFileName);
     	    
             try {
-                FileInputStream modelFile = new FileInputStream(new File(modelsFileName));
+                if (realFileName.startsWith("file://"))
+                    realFileName = realFileName.substring(7);
+                FileInputStream modelInputStream = new FileInputStream(new File(realFileName));
     	    
         	    int len;
         	    byte [] readBytes = new byte[512];
-        	    while ((len = modelFile.read(readBytes)) > 0)
+        	    while ((len = modelInputStream.read(readBytes)) > 0)
         	    {
         	        serializedModel.append(new String(readBytes,  0, len));
         	    }
         	    setSerializedModels(serializedModel.toString());
             } catch (FileNotFoundException e) {
-                throw new KettleStepException("File " + modelsFileName + " not found.");
+                throw new KettleStepException("File " + realFileName + " not found.");
             } catch (IOException e) {
-                throw new KettleStepException("Problem reading file " + modelsFileName);
+                throw new KettleStepException("Problem reading file " + realFileName);
             }
 	    } else {
 	        setSerializedModels(null);
@@ -258,63 +261,6 @@ public class FakeGamePluginMeta extends BaseStepMeta implements StepMetaInterfac
 	{
 	    return showOutputProbabilities;
 	}
-
-//	public void readRep(Repository rep, long id_step, List<DatabaseMeta> databases, Map<String,Counter> counters) throws KettleException
-//	{
-	    // TODO
-//		try
-//		{
-//			String name      =      rep.getStepAttributeString (id_step, 0, "value_name");
-//			String typedesc  =      rep.getStepAttributeString (id_step, 0, "value_type");
-//			String text      =      rep.getStepAttributeString (id_step, 0, "value_text");
-//			boolean isnull   =      rep.getStepAttributeBoolean(id_step, 0, "value_null");
-//			int length       = (int)rep.getStepAttributeInteger(id_step, 0, "value_length");
-//			int precision    = (int)rep.getStepAttributeInteger(id_step, 0, "value_precision");
-//			
-//			int type = ValueMeta.getType(typedesc);
-//			value = new ValueMetaAndData(new ValueMeta(name, type), null);
-//			value.getValueMeta().setLength(length);
-//            value.getValueMeta().setPrecision(precision);
-//			
-//			if (isnull) 
-//			{
-//				value.setValueData(null);
-//			}
-//			else
-//			{
-//                ValueMetaInterface stringMeta = new ValueMeta(name, ValueMetaInterface.TYPE_STRING);
-//				if (type!=ValueMetaInterface.TYPE_STRING) text=ValueDataUtil.trim(text);
-//				value.setValueData( value.getValueMeta().convertData(stringMeta, text));
-//			}
-//		}
-//		catch(KettleDatabaseException dbe)
-//		{
-//			throw new KettleException("error reading step with id_step="+id_step+" from the repository", dbe);
-//		}
-//		catch(Exception e)
-//		{
-//			throw new KettleException("Unexpected error reading step with id_step="+id_step+" from the repository", e);
-//		}
-//	}
-	
-
-//	public void saveRep(Repository rep, long id_transformation, long id_step) throws KettleException
-//	{
-	    // TODO
-//		try
-//		{
-//			rep.saveStepAttribute(id_transformation, id_step, "value_name", value.getValueMeta().getName());
-//			rep.saveStepAttribute(id_transformation, id_step, 0, "value_type",      value.getValueMeta().getTypeDesc());
-//			rep.saveStepAttribute(id_transformation, id_step, 0, "value_text",      value.getValueMeta().getString(value.getValueData()));
-//			rep.saveStepAttribute(id_transformation, id_step, 0, "value_null",      value.getValueMeta().isNull(value.getValueData()));
-//			rep.saveStepAttribute(id_transformation, id_step, 0, "value_length",    value.getValueMeta().getLength());
-//			rep.saveStepAttribute(id_transformation, id_step, 0, "value_precision", value.getValueMeta().getPrecision());
-//		}
-//		catch(KettleDatabaseException dbe)
-//		{
-//			throw new KettleException("Unable to save step information to the repository, id_step="+id_step, dbe);
-//		}
-//	}
 
     /**
      * Check the settings of this step and put findings in a remarks list.

@@ -408,10 +408,8 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 	
 	private boolean loadModel(String modelsFileName)
 	{
-	    modelsFileName = transMeta.environmentSubstitute(modelsFileName);
-	    
         try {
-            currentMeta.setModelsFileName(modelsFileName);
+            currentMeta.setModelsFileName(modelsFileName, transMeta);
             String serializedModels = currentMeta.getSerializedModels();
             if (serializedModels != null)
             {
@@ -420,9 +418,7 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
                 return true;
             }
         } catch (KettleStepException e1) {
-            log.logError(
-                    "[FakeGamePluginDialog]",
-                    Messages.getString("FakeGamePluginDialog.Log.FileLoadingError"));
+            log.logError(Messages.getString("FakeGamePluginDialog.Log.FileLoadingError") + ": " + e1.getMessage());
         }
         return false;
 	}
@@ -431,6 +427,7 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 	{
         ModelsFacade models = currentMeta.getModels();
         
+
         try {
             RowMetaInterface inputRowMeta = getInputRowMeta();
             models.generateMappings(inputRowMeta.getValueMetaList());
@@ -459,7 +456,7 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
                     "[FakeGamePluginDialog]",
                     Messages.getString("FakeGamePluginDialog.Log.MappingsGenerationError"));
         }	    
-	}
+    }
 	
 	private RowMetaInterface getInputRowMeta() throws KettleStepException
 	{
@@ -470,10 +467,11 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 	// Read data from currentMeta (TextFileInputInfo)
 	public void getData()
 	{
+	    wOutputProbs.setSelection(currentMeta.isShowOutputProbabilities());
 	    if (currentMeta.getModelFileName() != null) {
 	        wFilename.setText(currentMeta.getModelFileName());
-	        wOutputProbs.setSelection(currentMeta.isShowOutputProbabilities());
 	        wModelText.setText(currentMeta.getSerializedModels());
+	        loadModel(wFilename.getText());
 	        visualizeMappings();
 	    }
 	}
@@ -489,7 +487,6 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 	
 	private void ok()
 	{
-		stepname = wStepname.getText();
 		currentMeta.setShowOutputProbabilities(wOutputProbs.getSelection());
 		
 		if (!Const.isEmpty(wFilename.getText())) {
@@ -499,6 +496,7 @@ public class FakeGamePluginDialog extends BaseStepDialog implements StepDialogIn
 		    loadModel(null);
 		}
 		
+		stepname = wStepname.getText();
 		dispose();
 	}
 }

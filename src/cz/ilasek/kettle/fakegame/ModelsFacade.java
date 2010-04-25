@@ -123,10 +123,7 @@ public class ModelsFacade {
         int i = 0;
         for (ValueMetaInterface valueMeta : incommingHeader)
         {
-//            if (valueMeta.isNumeric())
-//            {
             map.put(valueMeta.getName(), i);
-//            }
             i++;
         }
         
@@ -221,7 +218,7 @@ public class ModelsFacade {
      * @return
      * @throws KettleValueException
      */
-    public Object[] evaluate(Object[] inputRow, RowMetaInterface rowMeta) throws KettleValueException
+    public Object[] evaluate(Object[] inputRow, RowMetaInterface rowMeta)
     {
         int totalResultsCount = getModelsSignatures().size();
         Object[] evaluationResult = new Object[totalResultsCount];
@@ -257,6 +254,13 @@ public class ModelsFacade {
         return evaluationResult;
     }
     
+    /**
+     * Prepares row coming to the plugin for evaluation using a FAKE GAME model.
+     * 
+     * @param inputRow
+     * @param rowMeta
+     * @return
+     */
     private double[] translateRow(Object[] inputRow, RowMetaInterface rowMeta)
     {
         double[] translatedRow = new double[mappings.length];
