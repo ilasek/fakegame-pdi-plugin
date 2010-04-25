@@ -58,8 +58,8 @@ public class FakeGamePluginMetaTest {
         classMeta = new FakeGamePluginMeta();
         modelMeta = new FakeGamePluginMeta();
         
-        classMeta.setModelsFileName(CLASS_FILE);
-        modelMeta.setModelsFileName(MODEL_FILE);
+        classMeta.setModelsFileName(CLASS_FILE, new TransMeta());
+        modelMeta.setModelsFileName(MODEL_FILE, new TransMeta());
     }
 
     /**
@@ -70,9 +70,9 @@ public class FakeGamePluginMetaTest {
     public void testHashCode() throws KettleStepException {
         FakeGamePluginMeta tmpMeta = new FakeGamePluginMeta();
         
-        tmpMeta.setModelsFileName(CLASS_FILE);
+        tmpMeta.setModelsFileName(CLASS_FILE, new TransMeta());
         assertEquals(tmpMeta.hashCode(), classMeta.hashCode());
-        tmpMeta.setModelsFileName(MODEL_FILE);
+        tmpMeta.setModelsFileName(MODEL_FILE, new TransMeta());
         assertFalse(tmpMeta.hashCode()== classMeta.hashCode());
     }
 
@@ -95,7 +95,7 @@ public class FakeGamePluginMetaTest {
     @Test
     public void testGetXML() throws KettleStepException {
         FakeGamePluginMeta tmpMeta = new FakeGamePluginMeta();
-        tmpMeta.setModelsFileName(CLASS_FILE);
+        tmpMeta.setModelsFileName(CLASS_FILE, new TransMeta());
         
         assertTrue(tmpMeta.getXML().equals(classMeta.getXML()));
         tmpMeta.setShowOutputProbabilities(true);
@@ -137,7 +137,7 @@ public class FakeGamePluginMetaTest {
     @Test
     public void testGetSerializedModels() throws KettleStepException {
         FakeGamePluginMeta tmpMeta = new FakeGamePluginMeta();
-        tmpMeta.setModelsFileName(MODEL_FILE);
+        tmpMeta.setModelsFileName(MODEL_FILE, new TransMeta());
         assertEquals(tmpMeta.getSerializedModels(), modelMeta.getSerializedModels());
     }
 
@@ -148,7 +148,7 @@ public class FakeGamePluginMetaTest {
     @Test
     public void testSetModelsFileName() throws KettleStepException {
         assertFalse(classMeta.hashCode() == modelMeta.hashCode());
-        classMeta.setModelsFileName(MODEL_FILE);
+        classMeta.setModelsFileName(MODEL_FILE, new TransMeta());
         assertTrue(classMeta.hashCode() == modelMeta.hashCode());
     }
 
@@ -187,7 +187,7 @@ public class FakeGamePluginMetaTest {
     public void testEqualsObject() throws KettleStepException {
         assertFalse(classMeta.equals(modelMeta));
         FakeGamePluginMeta tmpMeta =  new FakeGamePluginMeta();
-        tmpMeta.setModelsFileName(CLASS_FILE);
+        tmpMeta.setModelsFileName(CLASS_FILE, new TransMeta());
         assertTrue(classMeta.equals(tmpMeta));
     }
 

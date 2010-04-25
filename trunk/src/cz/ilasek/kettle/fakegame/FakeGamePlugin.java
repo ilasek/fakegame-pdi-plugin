@@ -2,7 +2,6 @@ package cz.ilasek.kettle.fakegame;
 
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
-import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
@@ -12,11 +11,12 @@ import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 
-/*
- * Created on 2-jun-2003
+/**
+ * Execution core of the FakeGamePlugin.
+ * 
+ * @author Ivo Lasek
  *
  */
-
 public class FakeGamePlugin extends BaseStep implements StepInterface 
 {
     private FakeGamePluginData data;
@@ -28,6 +28,9 @@ public class FakeGamePlugin extends BaseStep implements StepInterface
         super(s, stepDataInterface, copyNr, transMeta, trans);
     }
 
+    /**
+     * Processes one row and adds a resukt to the output of the plugin.
+     */
     public boolean processRow(StepMetaInterface smi, StepDataInterface sdi)
             throws KettleException {
         meta = (FakeGamePluginMeta) smi;
@@ -52,17 +55,32 @@ public class FakeGamePlugin extends BaseStep implements StepInterface
         return true;
     }
     
-    private void firstRow()
+    /**
+     * Called, when first row arrives - performs necessary preparations for the 
+     * execution.
+     * @throws KettleException 
+     */
+    private void firstRow() throws KettleException
     {
         first = false;
         data.setOutputRowMeta(getInputRowMeta().clone());
         
-        meta.getModels().generateMappings(getInputRowMeta().getValueMetaList());
+        ModelsFacade models = meta.getModels();
+        if (models == null)
+            throw new KettleException("No models loaded for this step.");
+        
+        models.generateMappings(getInputRowMeta().getValueMetaList());
         
         meta.getFields(data.getOutputRowMeta(), getStepname(), null, null, this);        
     }
     
-    private Object[] evalueateModel(Object[] inputRow) throws KettleValueException
+    /**
+     * Evaluates incoming data and adds the evaluation result to the output row.
+     *  
+     * @param inputRow Incoming data.
+     * @return Inputs with evaluation result added.
+     */
+    private Object[] evalueateModel(Object[] inputRow)
     {
         Object[] outputRow = RowDataUtil.resizeArray(inputRow, data.getOutputRowMeta().size());
         int resultIndex = getInputRowMeta().size();
@@ -78,6 +96,9 @@ public class FakeGamePlugin extends BaseStep implements StepInterface
         return outputRow;
     }
 
+    /**
+     * Plugin initialization.
+     */
     public boolean init(StepMetaInterface smi, StepDataInterface sdi) {
         meta = (FakeGamePluginMeta) smi;
         data = (FakeGamePluginData) sdi;
@@ -85,8 +106,9 @@ public class FakeGamePlugin extends BaseStep implements StepInterface
         return super.init(smi, sdi);
     }
 
-    //
-    // Run is were the action happens!
+    /**
+     * Run is were the action happens!
+     */
     public void run() {
         logBasic("Starting to run...");
         try {
