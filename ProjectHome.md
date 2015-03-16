@@ -1,0 +1,1 @@
+Plugin for Pentaho Data Integration enabling use of FakeGame models to score data.
